@@ -1,0 +1,10 @@
+{
+  "gps": {
+    "serialport": "/dev/ttyS26",
+    "baudrate": 9600,
+    "updaterate": 1000,
+    "dbConf": {
+      "udp_port": 8092
+    }
+  }
+}
