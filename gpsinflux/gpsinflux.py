@@ -42,16 +42,18 @@ def gps_setup(serialport, baudrate, updaterate):
         gps.set_nmea_output(gll = 0, rmc = 0, vtg = 0, gga = 3, gsa = 0, gsv = 0)
     except Exception as e:
         raise(e)
+        logger.exception('Exception Occured while setting up GPS')
         sys.exit(2)
 
 
 def send_data(serialport, baudrate, updaterate, db_host, db_port, db_name, use_udp, udp_port):
     logger.info('Setting Up GPS')
+    logger.debug('GPS Config: %s %d %d' % (serialport, baudrate, updaterate))
     gps_setup(serialport, baudrate, updaterate)
 
     global client
     if use_udp:
-        print('UDP selected')
+        logger.info('UDP Sending selected')
         try:
             client = InfluxDBClient(host=db_host, port=db_port, use_udp=True, udp_port=udp_port)
             logger.info('InfluxDB Client Created for UDP Sending')
@@ -60,6 +62,7 @@ def send_data(serialport, baudrate, updaterate, db_host, db_port, db_name, use_u
             raise(e)
             sys.exit(2)
 
+        # dict layout for UDP Packet
         measurement = {
             "tags": {
                 "type": "GGA",
@@ -78,7 +81,7 @@ def send_data(serialport, baudrate, updaterate, db_host, db_port, db_name, use_u
         }
         logger.debug(measurement)
     else:
-        print('HTTP selected')
+        logger.info('HTTP Sending selected')
         try:
             client = InfluxDBClient(host=db_host, port=db_port, use_udp=False, database=db_name)
             logger.info('InfluxDB Client Created for HTTP Sending')
@@ -108,9 +111,11 @@ def send_data(serialport, baudrate, updaterate, db_host, db_port, db_name, use_u
     reader = pynmea2.NMEAStreamReader(errors='ignore')
     try:
         com = serial.Serial(serialport, baudrate, timeout=5.0)
+        logger.info('Created Connection to Serial Port')
 
     except serial.SerialException as e:
         raise(e)
+        logger.exception('Exception Occured while Creation of SerialPort Connection')
 
     while True:
         try:
@@ -133,6 +138,7 @@ def send_data(serialport, baudrate, updaterate, db_host, db_port, db_name, use_u
                             client.send_packet(measurement)
                         except InfluxDBClientError as e:
                             raise(e)
+                            logger.exception('Exception Occured while Sending UDP Packet')
                             sys.exit(3)
                     else:
                         measurement[0]["fields"]["lat"] = dat.latitude
@@ -143,6 +149,7 @@ def send_data(serialport, baudrate, updaterate, db_host, db_port, db_name, use_u
                             client.write_points(measurement)
                         except Exception as e:
                             raise(e)
+                            logger.exception('Exception Occured while Sending HTTP Data')
                             sys.exit(3)
             else:
                 print("GPS Location not yet available.")
@@ -182,7 +189,7 @@ def parse_args():
 
 def main():
     args = parse_args()
-    print(args)
+    # print(args)
     CONF = dict()
 
     if len(sys.argv) == 1:
@@ -191,7 +198,7 @@ def main():
         with open(CONF_PATH) as cFile:
             _conf = json.load(cFile)
             CONF = _conf['gps'] # store conf for GPS
-            print(json.dumps(CONF))
+            logger.debug('CONF: ' + json.dumps(CONF))
 
         try:
             send_data(serialport = CONF['serialport'],
@@ -228,6 +235,7 @@ def main():
                           use_udp=args.udp,
                           udp_port=args.udp_port)
             except KeyboardInterrupt as e:
+                logger.exception('CTRL+C hit for Default Configuration')
                 com.close()
                 client.close()
                 sys.exit(0)
