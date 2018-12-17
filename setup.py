@@ -5,7 +5,7 @@ def readme():
         return f.read()
 
 setup(name='gpsinflux',
-      version='1.0',
+      version='1.1',
       description='Extract GPS values and store into InfluxDB',
       long_description=readme(),
       url='https://github.com/iotfablab/gpsinflux',
