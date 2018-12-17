@@ -126,33 +126,36 @@ def send_data(serialport, baudrate, updaterate, db_host, db_port, db_name, use_u
 
         for msg in reader.next(data):
             dat = pynmea2.parse(str(msg).strip('\r\n'))
-            # print(dat)
-            if not (dat.latitude == 0.0 and dat.longitude == 0.0):
-                if isinstance(dat, pynmea2.GGA):
-                    if use_udp:
-                        measurement["points"][0]["fields"]["lat"] = dat.latitude
-                        measurement["points"][0]["fields"]["lon"] = dat.longitude
-                        measurement["points"][0]["fields"]["alt"] = dat.altitude
-                        measurement["time"] = time.time()
-                        try:
-                            client.send_packet(measurement)
-                        except InfluxDBClientError as e:
-                            raise(e)
-                            logger.exception('Exception Occured while Sending UDP Packet')
-                            sys.exit(3)
-                    else:
-                        measurement[0]["fields"]["lat"] = dat.latitude
-                        measurement[0]["fields"]["lon"] = dat.longitude
-                        measurement[0]["fields"]["alt"] = dat.altitude
-                        measurement[0]["time"] = datetime.datetime.utcnow().isoformat('T') + 'Z'
-                        try:
-                            client.write_points(measurement)
-                        except Exception as e:
-                            raise(e)
-                            logger.exception('Exception Occured while Sending HTTP Data')
-                            sys.exit(3)
-            else:
-                print("GPS Location not yet available.")
+            print(dat)
+            try:
+                if not (dat.latitude == 0.0 and dat.longitude == 0.0):
+                    if isinstance(dat, pynmea2.GGA):
+                        if use_udp:
+                            measurement["points"][0]["fields"]["lat"] = dat.latitude
+                            measurement["points"][0]["fields"]["lon"] = dat.longitude
+                            measurement["points"][0]["fields"]["alt"] = dat.altitude
+                            measurement["time"] = time.time()
+                            try:
+                                client.send_packet(measurement)
+                            except InfluxDBClientError as e:
+                                raise(e)
+                                logger.exception('Exception Occured while Sending UDP Packet')
+                                sys.exit(3)
+                        else:
+                            measurement[0]["fields"]["lat"] = dat.latitude
+                            measurement[0]["fields"]["lon"] = dat.longitude
+                            measurement[0]["fields"]["alt"] = dat.altitude
+                            measurement[0]["time"] = datetime.datetime.utcnow().isoformat('T') + 'Z'
+                            try:
+                                client.write_points(measurement)
+                            except Exception as e:
+                                raise(e)
+                                logger.exception('Exception Occured while Sending HTTP Data')
+                                sys.exit(3)
+                else:
+                    print("GPS Location not yet available.")
+            except Exception as e:
+                pass
 
 def parse_args():
     """Pass Arguments if passed else use configuration file"""
