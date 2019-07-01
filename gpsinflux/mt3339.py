@@ -78,7 +78,7 @@ class mt3339():
 
 	def set_nav_speed_threshold(self, treshold = 0):
 	#set speed treshold. If speed is below the treshold the output position will stay frozen
-		t = unicode(treshold)
+		t = str(treshold)
 		if t not in self.speed_treshold:
 			return -1
 		else:
@@ -153,7 +153,7 @@ class mt3339():
 	def send_command(self, nmea_command):
 		ser = serial.Serial(port = self.device, baudrate = self.baudrate, timeout=3)
 		time.sleep(0.1)
-		ser.write(str.encode(nmea_command));
+		ser.write(str.encode(nmea_command))
 		time.sleep(0.1)
 		ser.close()
 
