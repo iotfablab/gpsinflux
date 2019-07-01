@@ -13,7 +13,7 @@ import datetime
 import argparse
 import serial
 import pynmea2
-from gpsinflux.mt3339 import mt3339
+from .mt3339 import mt3339
 from influxdb import InfluxDBClient
 from influxdb.client import InfluxDBClientError
 
@@ -21,7 +21,7 @@ from influxdb.client import InfluxDBClientError
 logger = logging.getLogger("main")
 logger.setLevel(logging.ERROR)
 
-handler = logging.FileHandler("/tmp/gpsinflux.log")
+handler = logging.FileHandler("/var/log/gpsinflux.log")
 handler.setLevel(logging.ERROR)
 
 formatter = logging.Formatter('%(asctime)s-%(name)s-%(message)s')
@@ -39,74 +39,45 @@ def gps_setup(serialport, baudrate, updaterate):
         gps = mt3339(serialport)
         gps.set_baudrate(baudrate)
         gps.set_nmea_update_rate(updaterate)
-        gps.set_nmea_output(gll = 0, rmc = 0, vtg = 0, gga = 3, gsa = 0, gsv = 0)
+        gps.set_nmea_output(gll = 0, rmc = 3, vtg = 0, gga = 0, gsa = 0, gsv = 0)
     except Exception as e:
-        raise(e)
         logger.exception('Exception Occured while setting up GPS')
-        sys.exit(2)
+        raise(e)
 
 
-def send_data(serialport, baudrate, updaterate, db_host, db_port, db_name, use_udp, udp_port):
+def send_data(serialport, baudrate, updaterate, db_host, db_port, udp_port):
     logger.info('Setting Up GPS')
     logger.debug('GPS Config: %s %d %d' % (serialport, baudrate, updaterate))
     gps_setup(serialport, baudrate, updaterate)
 
     global client
-    if use_udp:
-        logger.info('UDP Sending selected')
-        try:
-            client = InfluxDBClient(host=db_host, port=db_port, use_udp=True, udp_port=udp_port)
-            logger.info('InfluxDB Client Created for UDP Sending')
-        except InfluxDBClientError as e:
-            logger.exception('Exception while InfluxDB Client Creation for UDP')
-            raise(e)
-            sys.exit(2)
+    logger.info('UDP Sending selected')
+    try:
+        client = InfluxDBClient(host=db_host, port=db_port, use_udp=True, udp_port=udp_port)
+        logger.info('InfluxDB Client Created for UDP Sending')
+    except InfluxDBClientError as e:
+        logger.exception('Exception while InfluxDB Client Creation for UDP')
+        raise(e)
 
-        # dict layout for UDP Packet
-        measurement = {
-            "tags": {
-                "type": "GGA",
-            },
-            "points": [
-                {
-                    "measurement": "gps",
-                    "fields": {
-                        "lat": 0.0,
-                        "lon": 0.0,
-                        "alt": 0.0,
-                        "status": 0
-                    }
-                }
-            ]
-        }
-        logger.debug(measurement)
-    else:
-        logger.info('HTTP Sending selected')
-        try:
-            client = InfluxDBClient(host=db_host, port=db_port, use_udp=False, database=db_name)
-            logger.info('InfluxDB Client Created for HTTP Sending')
-        except InfluxDBClientError as e:
-            logger.exception('Exception while InfluxDB Client Creation for HTTP')
-            raise(e)
-            sys.exit(2)
-
-        # Dict layout for sending Data via HTTP to InfluxDB
-        measurement = [
+    # dict layout for UDP Packet
+    measurement = {
+        "tags": {
+            "type": "RMC",
+        },
+        "points": [
             {
                 "measurement": "gps",
-                "tags": {
-                    "type": "GGA"
-                },
                 "fields": {
                     "lat": 0.0,
                     "lon": 0.0,
-                    "alt": 0.0,
+                    "sog": 0.0,
+                    "cog": 0.0,
                     "status": 0
                 }
             }
         ]
-        logger.debug(measurement)
-
+    }
+    logger.debug(measurement)
     global com
     reader = pynmea2.NMEAStreamReader(errors='ignore')
     try:
@@ -114,8 +85,8 @@ def send_data(serialport, baudrate, updaterate, db_host, db_port, db_name, use_u
         logger.info('Created Connection to Serial Port')
 
     except serial.SerialException as e:
-        raise(e)
         logger.exception('Exception Occured while Creation of SerialPort Connection')
+        raise(e)
 
     while True:
         try:
@@ -125,33 +96,22 @@ def send_data(serialport, baudrate, updaterate, db_host, db_port, db_name, use_u
             pass
 
         for msg in reader.next(data):
-            dat = pynmea2.parse(str(msg).strip('\r\n'))
+            dat = pynmea2.parse(str(msg).strip('\r\n'), check=True)
             print(dat)
             try:
                 if not (dat.latitude == 0.0 and dat.longitude == 0.0):
-                    if isinstance(dat, pynmea2.GGA):
-                        if use_udp:
-                            measurement["points"][0]["fields"]["lat"] = dat.latitude
-                            measurement["points"][0]["fields"]["lon"] = dat.longitude
-                            measurement["points"][0]["fields"]["alt"] = dat.altitude
-                            measurement["time"] = time.time()
-                            try:
-                                client.send_packet(measurement)
-                            except InfluxDBClientError as e:
-                                raise(e)
-                                logger.exception('Exception Occured while Sending UDP Packet')
-                                sys.exit(3)
-                        else:
-                            measurement[0]["fields"]["lat"] = dat.latitude
-                            measurement[0]["fields"]["lon"] = dat.longitude
-                            measurement[0]["fields"]["alt"] = dat.altitude
-                            measurement[0]["time"] = datetime.datetime.utcnow().isoformat('T') + 'Z'
-                            try:
-                                client.write_points(measurement)
-                            except Exception as e:
-                                raise(e)
-                                logger.exception('Exception Occured while Sending HTTP Data')
-                                sys.exit(3)
+                    if isinstance(dat, pynmea2.RMC):
+                        
+                        measurement["points"][0]["fields"]["lat"] = dat.latitude
+                        measurement["points"][0]["fields"]["lon"] = dat.longitude
+                        measurement["points"][0]["fields"]["sog"] = dat.spd_over_grnd
+                        measurement["points"][0]["fields"]["cog"] = dat.true_course
+                        measurement["time"] = time.time()
+                        try:
+                            client.send_packet(measurement)
+                        except InfluxDBClientError as e:
+                            logger.exception('Exception Occured while Sending UDP Packet')
+                            raise(e)
                 else:
                     print("GPS Location not yet available.")
             except Exception as e:
@@ -168,25 +128,14 @@ def parse_args():
 
     parser.add_argument('--updaterate', type=int, required=False, default=1000, help='Update Rate for GPS Module in ms. Default: 1000ms')
 
-    parser.add_argument('--http', dest='udp', action='store_false', default=False,
-                        help='Send GPS data via HTTP. Default: Disabled')
-
     parser.add_argument('--db-host', type=str, required=False, default='localhost',
                         help='hostname for InfluxDB HTTP Instance. Default: localhost')
 
     parser.add_argument('--db-port', type=int, required=False, default=8086,
                         help='port number for InfluxDB HTTP Instance. Default: 8086')
 
-    parser.add_argument('--db-name', type=str, required=False,
-                        help='database name to add GPS values to')
-
-    parser.add_argument('--udp', dest='udp', action='store_true', default=True,
-                        help='Send sensor via UDP. Default: Enabled')
-
     parser.add_argument('--udp-port', type=int, required=False,
                         help='UDP Port for sending information via UDP.\n Should also be configured in InfluxDB')
-
-    parser.set_defaults(udp=True)
 
     return parser.parse_args()
 
@@ -209,11 +158,9 @@ def main():
                       updaterate=CONF['updaterate'],
                       db_host=args.db_host,
                       db_port=args.db_port,
-                      db_name=args.db_name,
-                      use_udp=args.udp,
                       udp_port=CONF['dbConf']['udp_port']
                       )
-        except KeyboardInterrupt as e:
+        except KeyboardInterrupt:
             logger.exception('CTRL+C hit for Default Configuration')
             com.close()
             client.close()
@@ -222,26 +169,23 @@ def main():
     elif len(sys.argv) > 1:
         if args.serialport is None:
             print('Please Mention SerialPort for GPS Module')
-        if args.udp and args.udp_port == None:
+            sys.exit(1)
+        if args.udp_port == None:
             print('Please Mention UDP Port for Sending Values')
-        elif not args.udp and args.db_name == None:
-            print('Please Mention DB Name for Sending Values')
-        else:
-            print('Starting Script with Custom Arguments')
-            try:
-                send_data(serialport = args.serialport,
-                          baudrate=args.baudrate,
-                          updaterate=args.updaterate,
-                          db_host=args.db_host,
-                          db_port=args.db_port,
-                          db_name=args.db_name,
-                          use_udp=args.udp,
-                          udp_port=args.udp_port)
-            except KeyboardInterrupt as e:
-                logger.exception('CTRL+C hit for Default Configuration')
-                com.close()
-                client.close()
-                sys.exit(0)
+            sys.exit(1)
+        print('Starting Script with Custom Arguments')
+        try:
+            send_data(serialport = args.serialport,
+                        baudrate=args.baudrate,
+                        updaterate=args.updaterate,
+                        db_host=args.db_host,
+                        db_port=args.db_port,
+                        udp_port=args.udp_port)
+        except KeyboardInterrupt:
+            logger.exception('CTRL+C hit for Default Configuration')
+            com.close()
+            client.close()
+            sys.exit(0)
 
 
 if __name__ == '__main__':
