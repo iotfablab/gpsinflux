@@ -72,7 +72,7 @@ def send_data(serialport, baudrate, updaterate, db_host, db_port, udp_port):
                     "lon": 0.0,
                     "sog": 0.0,
                     "cog": 0.0,
-                    "status": 0
+                    "status": 0.0
                 }
             }
         ]
