@@ -129,13 +129,13 @@ def parse_args():
     parser.add_argument('--updaterate', type=int, required=False, default=1000, help='Update Rate for GPS Module in ms. Default: 1000ms')
 
     parser.add_argument('--db-host', type=str, required=False, default='localhost',
-                        help='hostname for InfluxDB HTTP Instance. Default: localhost')
+                        help='hostname for InfluxDB. Default: `localhost`')
 
     parser.add_argument('--db-port', type=int, required=False, default=8086,
-                        help='port number for InfluxDB HTTP Instance. Default: 8086')
+                        help='port number for InfluxDB. Default: 8086')
 
     parser.add_argument('--udp-port', type=int, required=False,
-                        help='UDP Port for sending information via UDP.\n Should also be configured in InfluxDB')
+                        help='UDP Port for sending information via UDP. Should also be configured in `influxdb.conf`')
 
     return parser.parse_args()
 
