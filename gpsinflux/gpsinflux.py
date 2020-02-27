@@ -36,6 +36,7 @@ logger.addHandler(handler)
 DEVICE = ''
 com = None
 client = None
+gps_conf = dict()
 mqtt_conf = dict()
 
 
@@ -58,11 +59,12 @@ def publish_data(lineprotocol_data):
     lp_array = lineprotocol_data.split('\n')
     lp_array.pop()  # remove the last newline from the array
     publish_messages = []
+    global gps_conf
     global mqtt_conf
-    for topic in mqtt_conf['topics']:
+    for topic in gps_conf['topics']:
         mqtt_msg = {
             'topic': DEVICE + '/' + topic,
-            'payload': lp_array[mqtt_conf['topics'].index(topic)],
+            'payload': lp_array[gps_conf['topics'].index(topic)],
             'qos': 1,
             'retain': False
         }
@@ -198,6 +200,7 @@ def main():
     args = parse_args()
     # print(args)
     CONF = file_path(args.config)
+    global gps_conf
     gps_conf = CONF['gps']
     influx_conf = CONF['influx']
 
@@ -211,13 +214,13 @@ def main():
     logger.debug('Client for {influx_host}@{influx_port} with udp:{udp_port}'.format(
         influx_host=influx_conf['host'],
         influx_port=influx_conf['port'],
-        udp_port=influx_conf['udp_port']))
+        udp_port=gps_conf['udp_port']))
     global client
     client = InfluxDBClient(
         host=influx_conf['host'],
         port=influx_conf['port'],
         use_udp=True,
-        udp_port=influx_conf['udp_port'])
+        udp_port=gps_conf['udp_port'])
     logger.info('Checking Connectivity to InfluxDB')
     try:
         if client.ping():
