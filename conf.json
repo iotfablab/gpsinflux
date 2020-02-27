@@ -1,10 +1,23 @@
 {
+  "deviceID": "UMG/0001",
   "gps": {
-    "serialport": "/dev/ttyS26",
+    "serialport": "COM7",
     "baudrate": 9600,
-    "updaterate": 1000,
-    "dbConf": {
-      "udp_port": 8092
-    }
+    "updaterate": 1000
+  },
+  "influx": {
+    "host": "localhost",
+    "port": 8086,
+    "udp_port": 8092
+  },
+  "mqtt": {
+    "broker": "localhost",
+    "port": 1883,
+    "topics": [
+      "location/gps/latitude",
+      "location/gps/longitude",
+      "groundVelocity/gps/sog",
+      "groundVelocity/gps/cog"
+    ]
   }
 }

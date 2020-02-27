@@ -1,11 +1,13 @@
 from setuptools import setup
 
+
 def readme():
     with open('README.md') as f:
         return f.read()
 
+
 setup(name='gpsinflux',
-      version='1.3',
+      version='1.4',
       description='Extract GPS values and store into InfluxDB',
       long_description=readme(),
       url='https://github.com/iotfablab/gpsinflux',
@@ -17,7 +19,8 @@ setup(name='gpsinflux',
       install_requires=[
             'pynmea2',
             'pyserial',
-            'influxdb'
+            'influxdb',
+            'paho-mqtt'
       ],
       include_data_package=True,
       zip_safe=False)
