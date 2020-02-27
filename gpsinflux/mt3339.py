@@ -1,3 +1,21 @@
+	# mt3339.py is free software: you can redistribute it and/or modify
+    # it under the terms of the GNU Lesser General Public License as published by
+    # the Free Software Foundation, either version 3 of the License, or
+    # (at your option) any later version.
+
+    # This program is distributed in the hope that it will be useful,
+    # but WITHOUT ANY WARRANTY; without even the implied warranty of
+    # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    # GNU General Public License for more details.
+
+    # You should have received a copy of the GNU General Public License
+    # along with this program.  If not, see <https://www.gnu.org/licenses/>.
+	# Repository Information: https://github.com/shantanoo-desai/mtk3339
+	# Forked from https://github.com/PatentedAnimal/mtk3339
+
+	# Changes: - Use `functools` to perform xor operations
+	# 		   - Add exception catching for sending information to serial port
+
 import operator
 import serial
 import os
@@ -151,11 +169,15 @@ class mt3339():
 		return 0
 
 	def send_command(self, nmea_command):
-		ser = serial.Serial(port = self.device, baudrate = self.baudrate, timeout=3)
+		ser = serial.Serial(port = self.device, baudrate = self.baudrate, timeout=3.0)
 		time.sleep(0.1)
-		ser.write(str.encode(nmea_command))
-		time.sleep(0.1)
-		ser.close()
+		try:
+			ser.write(str.encode(nmea_command))
+			time.sleep(0.1)
+			ser.close()
+		except Exception as e:
+			ser.close()
+			raise(e)
 
 #Example commands:
 #gps = mt3339("/dev/ttyAMA0")
