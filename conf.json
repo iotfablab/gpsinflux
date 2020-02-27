@@ -1,18 +1,18 @@
 {
   "deviceID": "UMG/0001",
-  "gps": {
-    "serialport": "COM7",
-    "baudrate": 9600,
-    "updaterate": 1000
-  },
   "influx": {
     "host": "localhost",
-    "port": 8086,
-    "udp_port": 8092
+    "port": 8086
   },
   "mqtt": {
     "broker": "localhost",
-    "port": 1883,
+    "port": 1883
+  },
+  "gps": {
+    "serialport": "COM7",
+    "baudrate": 9600,
+    "updaterate": 1000,
+    "udp_port": 8092,
     "topics": [
       "location/gps/latitude",
       "location/gps/longitude",
