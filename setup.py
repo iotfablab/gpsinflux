@@ -7,13 +7,13 @@ def readme():
 
 
 setup(name='gpsinflux',
-      version='1.4',
-      description='Extract GPS values and store into InfluxDB',
+      version='1.5',
+      description='Extract GPS values and store into InfluxDB and publish via MQTT',
       long_description=readme(),
       url='https://github.com/iotfablab/gpsinflux',
       author='Shantanoo Desai',
       author_email='des@biba.uni-bremen.de',
-      license='MIT',
+      license='MIT & LGPLv3',
       packages=['gpsinflux'],
       scripts=['bin/gpsinflux'],
       install_requires=[
