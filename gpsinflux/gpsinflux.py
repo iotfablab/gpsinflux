@@ -96,7 +96,7 @@ def save_to_db(measurements):
 def read_from_gps(serialport, baudrate, updaterate):
     logger.info('Setting Up GPS')
     # NOTE: Comment the line below out when using Adafruit GPS Wing
-    # gps_setup(serialport, baudrate, updaterate)
+    gps_setup(serialport, baudrate, updaterate)
     global DEVICE
     # dict layout for UDP Packet
     measurement = {
@@ -146,7 +146,7 @@ def read_from_gps(serialport, baudrate, updaterate):
                 try:
                     if not (dat.latitude == 0.0 and dat.longitude == 0.0):
                         if isinstance(dat, pynmea2.RMC):
-                            timestamp = int(time.time())
+                            timestamp = int(time.time() * 1e9)
                             measurement["points"][0]["fields"]["lat"] = dat.latitude
                             measurement["points"][1]["fields"]["lon"] = dat.longitude
                             measurement["points"][2]["fields"]["sog"] = dat.spd_over_grnd
@@ -155,7 +155,7 @@ def read_from_gps(serialport, baudrate, updaterate):
                                 # insert timestamp to each point
                                 point['time'] = timestamp
                             with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-                                if executor.submit(publish_data, line_protocol.make_lines(measurement)).result():
+                                if executor.submit(publish_data, line_protocol.make_lines(measurement, precision='ms')).result():
                                     logger.info('MQTT Publish Success')
                                 if executor.submit(save_to_db, measurement).result():
                                     logger.info('Data saved to InfluxDB')
