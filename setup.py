@@ -7,7 +7,7 @@ def readme():
 
 
 setup(name='gpsinflux',
-      version='1.5',
+      version='1.6',
       description='Extract GPS values and store into InfluxDB and publish via MQTT',
       long_description=readme(),
       url='https://github.com/iotfablab/gpsinflux',
